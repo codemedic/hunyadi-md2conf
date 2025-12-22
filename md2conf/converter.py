@@ -406,6 +406,9 @@ class ConfluenceConverterOptions:
     render_drawio: bool = False
     render_mermaid: bool = False
     render_plantuml: bool = False
+    plantuml_theme: str | None = None
+    plantuml_skinparams: dict[str, str] | None = None
+    plantuml_includes: list[str] | None = None
     render_latex: bool = False
     diagram_output_format: Literal["png", "svg"] = "png"
     webui_links: bool = False
