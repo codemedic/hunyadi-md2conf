@@ -45,6 +45,9 @@ class Arguments(argparse.Namespace):
     render_drawio: bool
     render_mermaid: bool
     render_plantuml: bool
+    plantuml_theme: str | None
+    plantuml_skinparam: dict[str, str] | None
+    plantuml_includes: list[str] | None
     render_latex: bool
     diagram_output_format: Literal["png", "svg"]
     local: bool
@@ -206,6 +209,27 @@ def get_parser() -> argparse.ArgumentParser:
         help="Upload PlantUML diagram sources as Confluence page attachments. (Marketplace app required to display.)",
     )
     parser.add_argument(
+        "--plantuml-theme",
+        dest="plantuml_theme",
+        metavar="THEME",
+        help="PlantUML theme name to apply globally (e.g., bluegray, sketchy).",
+    )
+    parser.add_argument(
+        "--plantuml-skinparam",
+        dest="plantuml_skinparam",
+        nargs="+",
+        action=KwargsAppendAction,
+        metavar="KEY=VALUE",
+        help="PlantUML skinparam settings (e.g., backgroundColor=white svgTextPath=true).",
+    )
+    parser.add_argument(
+        "--plantuml-include",
+        dest="plantuml_includes",
+        action="append",
+        metavar="PATH",
+        help="PlantUML include file paths (can be repeated for multiple includes).",
+    )
+    parser.add_argument(
         "--render-latex",
         dest="render_latex",
         action="store_true",
@@ -330,6 +354,13 @@ def main() -> None:
     parser.parse_args(namespace=args)
 
     args.mdpath = Path(args.mdpath)
+
+    # Validate PlantUML theme if specified
+    if args.plantuml_theme is not None and args.render_plantuml:
+        from .plantuml import has_plantuml, validate_theme
+
+        if has_plantuml():
+            validate_theme(args.plantuml_theme)
 
     logging.basicConfig(
         level=getattr(logging, args.loglevel.upper(), logging.INFO),
