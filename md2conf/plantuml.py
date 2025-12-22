@@ -10,6 +10,7 @@ import base64
 import logging
 import os
 import shutil
+import subprocess
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +20,9 @@ from urllib.parse import quote
 from .diagram import render_diagram_subprocess
 
 LOGGER = logging.getLogger(__name__)
+
+# Module-level cache for PlantUML themes (valid for single invocation)
+_THEME_CACHE: list[str] | None = None
 
 
 @dataclass
@@ -102,6 +106,81 @@ def has_plantuml() -> bool:
 
     # Check if we have JAR file and Java is available
     return jar_path.is_file() and shutil.which("java") is not None
+
+
+def get_available_themes() -> list[str]:
+    """
+    Get list of available PlantUML themes.
+
+    Results are cached for the current invocation to avoid repeated
+    subprocess calls. Returns sorted list of theme names.
+    """
+    global _THEME_CACHE
+
+    # Check cache first
+    if _THEME_CACHE is not None:
+        LOGGER.debug("Using cached PlantUML themes")
+        return _THEME_CACHE
+
+    LOGGER.debug("Fetching available PlantUML themes")
+
+    try:
+        cmd = get_plantuml_command()
+        cmd.extend(["-pipe", "-txt"])
+
+        # PlantUML command to list all themes
+        theme_query = "@startjson\n%get_all_theme()\n@endjson"
+
+        result = subprocess.run(
+            cmd,
+            input=theme_query,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"PlantUML theme query failed: {result.stderr}"
+            )
+
+        # Parse theme names from output (one per line, with whitespace)
+        themes = []
+        for line in result.stdout.split("\n"):
+            theme = line.strip()
+            if theme and not theme.startswith("@"):
+                themes.append(theme)
+
+        # Cache and return sorted list
+        themes.sort()
+        _THEME_CACHE = themes
+
+        LOGGER.debug(f"Found {len(themes)} themes: {', '.join(themes[:5])}...")
+        return themes
+
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        raise RuntimeError(f"Failed to get PlantUML themes: {e}") from e
+
+
+def validate_theme(theme: str) -> None:
+    """
+    Validate that a theme name is available in PlantUML.
+
+    Raises RuntimeError if theme is not found, with helpful error message
+    listing available themes.
+    """
+    available = get_available_themes()
+
+    if theme not in available:
+        themes_list = ", ".join(available[:10])
+        if len(available) > 10:
+            themes_list += f", ... ({len(available)} total)"
+
+        raise RuntimeError(
+            f"PlantUML theme '{theme}' not found. "
+            f"Available themes: {themes_list}"
+        )
 
 
 def render_diagram(
