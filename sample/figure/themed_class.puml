@@ -3,6 +3,8 @@ title: Themed Class Diagram
 config:
     theme: bluegray
     scale: 1.2
+    skinparams:
+      defaultFontName: "Roboto, Arial, Helvetica, SansSerif, sans-serif"
 ---
 @startuml
 abstract class Animal {
