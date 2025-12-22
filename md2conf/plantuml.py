@@ -207,6 +207,20 @@ def render_diagram(
         ]
     )
 
+    # Add theme if specified
+    if config.theme is not None:
+        cmd.extend(["--theme", config.theme])
+
+    # Add skinparams if specified
+    if config.skinparams:
+        for key, value in config.skinparams.items():
+            cmd.append(f"--skinparam={key}={value}")
+
+    # Add include files if specified
+    if config.includes:
+        for include_path in config.includes:
+            cmd.extend(["--include", include_path])
+
     # Add scale if specified
     if config.scale is not None:
         cmd.extend(["-scale", str(config.scale)])
