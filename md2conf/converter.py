@@ -1153,6 +1153,77 @@ class ConfluenceStorageFormatConverter(NodeVisitor):
             LOGGER.warning("Failed to extract PlantUML properties: %s", ex)
             return None
 
+    def _merge_plantuml_config(
+        self,
+        per_diagram_config: PlantUMLConfigProperties | None,
+        diagram_path: Path | None = None,
+    ) -> PlantUMLConfigProperties:
+        """
+        Merge global and per-diagram PlantUML configurations.
+
+        :param per_diagram_config: Configuration from diagram's YAML front-matter.
+        :param diagram_path: Path to diagram file for resolving relative includes.
+        :returns: Merged configuration with per-diagram overrides applied.
+        """
+        from .plantuml import PlantUMLConfigProperties, validate_theme
+
+        # Start with global config from options
+        merged = PlantUMLConfigProperties(
+            scale=None,
+            skinparams=dict(self.options.plantuml_skinparams) if self.options.plantuml_skinparams else None,
+            includes=list(self.options.plantuml_includes) if self.options.plantuml_includes else None,
+            theme=self.options.plantuml_theme,
+        )
+
+        # Validate and resolve global includes (from CWD)
+        if merged.includes:
+            resolved_includes = []
+            for include_path_str in merged.includes:
+                include_path = Path(include_path_str)
+                if not include_path.is_absolute():
+                    include_path = Path.cwd() / include_path
+                if not include_path.exists():
+                    raise RuntimeError(
+                        f"PlantUML include file not found: {include_path}"
+                    )
+                resolved_includes.append(str(include_path.resolve()))
+            merged.includes = resolved_includes
+
+        # Merge per-diagram config if present
+        if per_diagram_config:
+            # Per-diagram scale overrides global
+            if per_diagram_config.scale is not None:
+                merged.scale = per_diagram_config.scale
+
+            # Per-diagram theme overrides global (and validate it)
+            if per_diagram_config.theme is not None:
+                validate_theme(per_diagram_config.theme)
+                merged.theme = per_diagram_config.theme
+
+            # Per-diagram skinparams override matching keys
+            if per_diagram_config.skinparams:
+                if merged.skinparams is None:
+                    merged.skinparams = {}
+                merged.skinparams.update(per_diagram_config.skinparams)
+
+            # Per-diagram includes are added after global (higher priority)
+            if per_diagram_config.includes:
+                if merged.includes is None:
+                    merged.includes = []
+                # Resolve relative includes from diagram directory
+                for include_path_str in per_diagram_config.includes:
+                    include_path = Path(include_path_str)
+                    if not include_path.is_absolute() and diagram_path:
+                        include_path = diagram_path.parent / include_path
+                    if not include_path.exists():
+                        raise RuntimeError(
+                            f"PlantUML include file not found: {include_path} "
+                            f"(relative to {diagram_path.parent if diagram_path else 'current directory'})"
+                        )
+                    merged.includes.append(str(include_path.resolve()))
+
+        return merged
+
     def _transform_external_plantuml(self, absolute_path: Path, attrs: ImageAttributes) -> ElementType:
         """
         Emits Confluence Storage Format XHTML for a PlantUML diagram
@@ -1175,7 +1246,8 @@ class ConfluenceStorageFormatConverter(NodeVisitor):
             if not plantuml.has_plantuml():
                 raise RuntimeError("PlantUML JAR not available. Cannot render PlantUML diagrams. See README for installation instructions.")
 
-            config = self._extract_plantuml_config(content)
+            per_diagram_config = self._extract_plantuml_config(content)
+            config = self._merge_plantuml_config(per_diagram_config, absolute_path)
             image_data = plantuml.render_diagram(content, self.options.diagram_output_format, config=config)
 
             # Extract dimensions and update attributes based on format
@@ -1216,7 +1288,8 @@ class ConfluenceStorageFormatConverter(NodeVisitor):
                 raise RuntimeError("PlantUML JAR not available. Cannot create PlantUML macro. See README for installation instructions.")
 
             # Render to SVG for plantumlcloud macro (macro requires SVG)
-            config = self._extract_plantuml_config(content)
+            per_diagram_config = self._extract_plantuml_config(content)
+            config = self._merge_plantuml_config(per_diagram_config, absolute_path)
             image_data = plantuml.render_diagram(content, "svg", config=config)
 
             # Extract dimensions from SVG
@@ -1244,7 +1317,8 @@ class ConfluenceStorageFormatConverter(NodeVisitor):
             if not plantuml.has_plantuml():
                 raise RuntimeError("PlantUML JAR not available. Cannot render PlantUML diagrams. See README for installation instructions.")
 
-            config = self._extract_plantuml_config(content)
+            per_diagram_config = self._extract_plantuml_config(content)
+            config = self._merge_plantuml_config(per_diagram_config, diagram_path=None)
             image_data = plantuml.render_diagram(content, self.options.diagram_output_format, config=config)
 
             # Extract dimensions based on format
@@ -1287,7 +1361,8 @@ class ConfluenceStorageFormatConverter(NodeVisitor):
                 raise RuntimeError("PlantUML JAR not available. Cannot create PlantUML macro. See README for installation instructions.")
 
             # Render to SVG for plantumlcloud macro (macro requires SVG)
-            config = self._extract_plantuml_config(content)
+            per_diagram_config = self._extract_plantuml_config(content)
+            config = self._merge_plantuml_config(per_diagram_config, diagram_path=None)
             image_data = plantuml.render_diagram(content, "svg", config=config)
 
             # Extract dimensions from SVG
