@@ -392,6 +392,9 @@ class ConfluenceConverterOptions:
     :param render_drawio: Whether to pre-render (or use the pre-rendered version of) draw.io diagrams.
     :param render_mermaid: Whether to pre-render Mermaid diagrams into PNG/SVG images.
     :param render_plantuml: Whether to pre-render PlantUML diagrams into PNG/SVG images.
+    :param plantuml_theme: Global PlantUML theme name to apply to all diagrams.
+    :param plantuml_skinparams: Global PlantUML skinparam settings to apply to all diagrams.
+    :param plantuml_includes: Global PlantUML include file paths to apply to all diagrams.
     :param render_latex: Whether to pre-render LaTeX formulas into PNG/SVG images.
     :param diagram_output_format: Target image format for diagrams.
     :param webui_links: When true, convert relative URLs to Confluence Web UI links.
@@ -1183,9 +1186,7 @@ class ConfluenceStorageFormatConverter(NodeVisitor):
                 if not include_path.is_absolute():
                     include_path = Path.cwd() / include_path
                 if not include_path.exists():
-                    raise RuntimeError(
-                        f"PlantUML include file not found: {include_path}"
-                    )
+                    raise RuntimeError(f"PlantUML include file not found: {include_path}")
                 resolved_includes.append(str(include_path.resolve()))
             merged.includes = resolved_includes
 
@@ -1217,8 +1218,7 @@ class ConfluenceStorageFormatConverter(NodeVisitor):
                         include_path = diagram_path.parent / include_path
                     if not include_path.exists():
                         raise RuntimeError(
-                            f"PlantUML include file not found: {include_path} "
-                            f"(relative to {diagram_path.parent if diagram_path else 'current directory'})"
+                            f"PlantUML include file not found: {include_path} (relative to {diagram_path.parent if diagram_path else 'current directory'})"
                         )
                     merged.includes.append(str(include_path.resolve()))
 
