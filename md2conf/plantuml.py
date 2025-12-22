@@ -27,9 +27,15 @@ class PlantUMLConfigProperties:
     Configuration options for rendering PlantUML diagrams.
 
     :param scale: Scaling factor for the rendered diagram.
+    :param skinparams: Dictionary of skinparam key-value pairs to apply to the diagram.
+    :param includes: List of file paths to include (resolved as --include arguments).
+    :param theme: PlantUML theme name to apply to the diagram.
     """
 
     scale: float | None = None
+    skinparams: dict[str, str] | None = None
+    includes: list[str] | None = None
+    theme: str | None = None
 
 
 def get_base_path() -> Path:
