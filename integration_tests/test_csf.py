@@ -7,6 +7,7 @@ Copyright 2022-2025, Levente Hunyadi
 """
 
 import logging
+import os
 import os.path
 import unittest
 from pathlib import Path
@@ -16,6 +17,17 @@ from md2conf.api import ConfluenceAPI, ConfluenceContentProperty, ConfluenceLabe
 from md2conf.csf import content_to_string
 from md2conf.extra import override
 from tests.utility import TypedTestCase
+
+# Configure logging for integration tests
+# Use environment variable to control level (default to INFO)
+_log_level_str = os.getenv("LOG_LEVEL", "INFO").upper()
+_log_level = getattr(logging, _log_level_str, logging.INFO)
+
+logging.basicConfig(
+    level=_log_level,
+    format="%(asctime)s - %(levelname)s - %(name)s - %(funcName)s [%(lineno)d] - %(message)s",
+    force=True,  # Override any existing configuration
+)
 
 
 class TestConfluenceStorageFormat(TypedTestCase):

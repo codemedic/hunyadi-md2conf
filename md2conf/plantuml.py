@@ -128,6 +128,8 @@ def get_available_themes() -> list[str]:
         cmd = get_plantuml_command()
         cmd.extend(["-pipe", "-txt"])
 
+        LOGGER.info("Fetching PlantUML themes with command: %s", " ".join(cmd))
+
         # PlantUML command to list all themes
         theme_query = "@startjson\n%get_all_theme()\n@endjson"
 
@@ -187,6 +189,15 @@ def render_diagram(
 
     if config is None:
         config = PlantUMLConfigProperties()
+
+    LOGGER.info(
+        "Rendering PlantUML diagram: format=%s, theme=%s, skinparams=%s, includes=%s, scale=%s",
+        output_format,
+        config.theme,
+        config.skinparams,
+        config.includes,
+        config.scale,
+    )
 
     # Build command for PlantUML with pipe mode
     # -pipe: read from stdin and write to stdout
