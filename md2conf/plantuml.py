@@ -141,9 +141,7 @@ def get_available_themes() -> list[str]:
         )
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"PlantUML theme query failed: {result.stderr}"
-            )
+            raise RuntimeError(f"PlantUML theme query failed: {result.stderr}")
 
         # Parse theme names from output (one per line, with whitespace)
         themes = []
@@ -177,10 +175,7 @@ def validate_theme(theme: str) -> None:
         if len(available) > 10:
             themes_list += f", ... ({len(available)} total)"
 
-        raise RuntimeError(
-            f"PlantUML theme '{theme}' not found. "
-            f"Available themes: {themes_list}"
-        )
+        raise RuntimeError(f"PlantUML theme '{theme}' not found. Available themes: {themes_list}")
 
 
 def render_diagram(

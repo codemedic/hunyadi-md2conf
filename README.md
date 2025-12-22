@@ -622,6 +622,12 @@ options:
   --no-render-mermaid   Upload Mermaid diagram sources as Confluence page attachments. (Marketplace app required to display.)
   --render-plantuml     Render PlantUML diagrams as image files. (Installed utility required to convert.)
   --no-render-plantuml  Upload PlantUML diagram sources as Confluence page attachments. (Marketplace app required to display.)
+  --plantuml-theme THEME
+                        PlantUML theme name to apply globally (e.g., bluegray, sketchy).
+  --plantuml-skinparam KEY=VALUE [KEY=VALUE ...]
+                        PlantUML skinparam settings (e.g., backgroundColor=white svgTextPath=true).
+  --plantuml-include PATH
+                        PlantUML include file paths (can be repeated for multiple includes).
   --render-latex        Render LaTeX formulas as image files. (Matplotlib required to convert.)
   --no-render-latex     Inline LaTeX formulas in Confluence page. (Marketplace app required to display.)
   --diagram-output-format {png,svg}
