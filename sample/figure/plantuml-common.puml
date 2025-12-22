@@ -1,0 +1,23 @@
+' Common PlantUML configuration and styles
+' This file can be included in multiple diagrams for consistency
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam roundcorner 5
+
+' Common color scheme
+!define PRIMARY_COLOR #2196F3
+!define SECONDARY_COLOR #FFC107
+!define SUCCESS_COLOR #4CAF50
+!define ERROR_COLOR #F44336
+
+' Reusable stereotypes
+skinparam usecase<<Critical>> {
+  BackgroundColor ERROR_COLOR
+  BorderColor #C62828
+}
+
+skinparam usecase<<Standard>> {
+  BackgroundColor PRIMARY_COLOR
+  BorderColor #1565C0
+}
