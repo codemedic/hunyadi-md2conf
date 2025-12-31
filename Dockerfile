@@ -39,7 +39,8 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
 
 # Install build dependencies
-RUN apk upgrade && apk add --update git && \
+RUN --mount=type=cache,target=/var/cache/apk \
+    apk add --update git && \
     python3 -m pip install --upgrade pip && \
     pip install build
 
@@ -129,27 +130,27 @@ ENV PLANTUML_JAR=/opt/plantuml/plantuml.jar
 # ===== Stage 6: base (minimal) =====
 # Minimal image with md2conf but no diagram rendering support
 FROM runtime-base AS base
-COPY --from=builder /build/wheel/*.whl /tmp/wheel/
-RUN python3 -m pip install /tmp/wheel/*.whl && rm -rf /tmp/wheel
+RUN --mount=type=bind,from=builder,source=/build/wheel,target=/tmp/wheel \
+    python3 -m pip install /tmp/wheel/*.whl
 USER md2conf
 
 # ===== Stage 7: mermaid =====
 # Base image + Mermaid diagram rendering support
 FROM mermaid-deps AS mermaid
-COPY --from=builder /build/wheel/*.whl /tmp/wheel/
-RUN python3 -m pip install /tmp/wheel/*.whl && rm -rf /tmp/wheel
+RUN --mount=type=bind,from=builder,source=/build/wheel,target=/tmp/wheel \
+    python3 -m pip install /tmp/wheel/*.whl
 USER md2conf
 
 # ===== Stage 8: plantuml =====
 # Base image + PlantUML diagram rendering support
 FROM plantuml-deps AS plantuml
-COPY --from=builder /build/wheel/*.whl /tmp/wheel/
-RUN python3 -m pip install /tmp/wheel/*.whl && rm -rf /tmp/wheel
+RUN --mount=type=bind,from=builder,source=/build/wheel,target=/tmp/wheel \
+    python3 -m pip install /tmp/wheel/*.whl
 USER md2conf
 
 # ===== Stage 9: all (default) =====
 # Base image + both Mermaid and PlantUML support
 FROM all-deps AS all
-COPY --from=builder /build/wheel/*.whl /tmp/wheel/
-RUN python3 -m pip install /tmp/wheel/*.whl && rm -rf /tmp/wheel
+RUN --mount=type=bind,from=builder,source=/build/wheel,target=/tmp/wheel \
+    python3 -m pip install /tmp/wheel/*.whl
 USER md2conf

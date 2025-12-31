@@ -744,6 +744,8 @@ docker run --rm --env-file .env --name md2conf -v $(pwd):/data leventehunyadi/md
 
 In each case, `-v $(pwd):/data` maps the current directory to Docker container's `WORKDIR` such *md2conf* can scan files and directories in the local file system.
 
+The Docker image is optimized for fast builds and efficient caching. For more details on the build architecture, see [CONTRIBUTING.md](CONTRIBUTING.md#docker--ci-optimizations).
+
 Note that the entry point for the Docker container's base image is `ENTRYPOINT ["python3", "-m", "md2conf"]`.
 
 With the `Dockerfile` approach, you can extend the base image:

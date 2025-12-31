@@ -28,8 +28,8 @@ jobs:
           tags: md2conf:test-local
           push: false
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=md2conf-docker
+          cache-to: type=gha,mode=max,scope=md2conf-docker
 
       - name: Run local action
         uses: ./

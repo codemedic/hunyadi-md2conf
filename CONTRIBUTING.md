@@ -215,6 +215,14 @@ docker build --target all --tag md2conf:full .
 docker build --tag md2conf .
 ```
 
+### Docker & CI Optimizations
+
+The `Dockerfile` and GitHub Action workflows are optimized for high-performance caching and parallel execution:
+
+- **Layer Decoupling:** Heavy system dependencies (Chromium, Java, Node.js) are isolated in `*-deps` stages. Code changes only trigger a fast `pip install` of the built wheel, skipping hours of system package installation over time.
+- **BuildKit Mounts:** We use `--mount=type=cache` for `apk` and `--mount=type=bind` for wheel installation to minimize image size and maximize build speed.
+- **Shared CI Cache:** Workflows use a shared cache scope (`md2conf-docker`) with `mode=max` to ensure layer reuse across different workflows (e.g., `test-action` reusing layers from `publish-docker`).
+
 **Configuring GitHub Actions for Custom Docker Hub:**
 
 To publish images to your own Docker Hub account, configure the following in your GitHub repository:
