@@ -79,15 +79,17 @@ RUN apk add --update nodejs npm chromium \
         ttf-inconsolata ttf-linux-libertine \
     && fc-cache -f
 
+# Install mermaid-cli
+ARG MERMAID_VERSION
+RUN mkdir -p /opt/mermaid && \
+    npm install --prefix /opt/mermaid @mermaid-js/mermaid-cli@${MERMAID_VERSION} && \
+    /opt/mermaid/node_modules/.bin/mmdc --version
+
 # Set environment for @mermaid-js/mermaid-cli
 # https://github.com/mermaid-js/mermaid-cli/blob/master/Dockerfile
 ENV CHROME_BIN="/usr/bin/chromium-browser" \
-    PUPPETEER_SKIP_DOWNLOAD="true"
-
-# Install mermaid-cli globally
-ARG MERMAID_VERSION
-RUN npm install -g @mermaid-js/mermaid-cli@${MERMAID_VERSION} \
-    && mmdc --version
+    PUPPETEER_SKIP_DOWNLOAD="true" \
+    PATH="/opt/mermaid/node_modules/.bin:${PATH}"
 
 # ===== Stage 4: plantuml-deps =====
 # Runtime base + PlantUML diagram rendering support
@@ -117,12 +119,8 @@ FROM mermaid-deps AS all-deps
 RUN apk add --update openjdk17-jre graphviz fontconfig \
     && fc-cache -f
 
-# Download PlantUML JAR
-ARG PLANTUML_VERSION
-RUN mkdir -p /opt/plantuml && \
-    wget -O /opt/plantuml/plantuml.jar \
-       "https://github.com/plantuml/plantuml/releases/download/v${PLANTUML_VERSION}/plantuml-${PLANTUML_VERSION}.jar" \
-    && java -jar /opt/plantuml/plantuml.jar -version
+# Copy PlantUML JAR from plantuml-deps stage
+COPY --from=plantuml-deps /opt/plantuml /opt/plantuml
 
 # Set PlantUML JAR location
 ENV PLANTUML_JAR=/opt/plantuml/plantuml.jar

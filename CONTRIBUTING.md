@@ -215,12 +215,34 @@ docker build --target all --tag md2conf:full .
 docker build --tag md2conf .
 ```
 
+**Building with Docker Bake (Parallel Builds):**
+
+For faster parallel builds of all variants, use Docker Bake:
+
+```bash
+# Build all variants in parallel
+docker buildx bake --load
+
+# Build specific variants
+docker buildx bake --load mermaid plantuml
+
+# Build a single variant
+docker buildx bake --load all
+```
+
+This approach:
+
+- Builds shared layers only once
+- Leverages BuildKit caching
+- Produces locally tagged images: `md2conf:base`, `md2conf:mermaid`, `md2conf:plantuml`, `md2conf:all`
+
 ### Docker & CI Optimizations
 
 The `Dockerfile` and GitHub Action workflows are optimized for high-performance caching and parallel execution:
 
 - **Layer Decoupling:** Heavy system dependencies (Chromium, Java, Node.js) are isolated in `*-deps` stages. Code changes only trigger a fast `pip install` of the built wheel, skipping hours of system package installation over time.
 - **BuildKit Mounts:** We use `--mount=type=cache` for `apk` and `--mount=type=bind` for wheel installation to minimize image size and maximize build speed.
+- **Docker Bake:** We use `docker buildx bake` to build all image variants in parallel, ensuring shared layers are built only once.
 - **Shared CI Cache:** Workflows use a shared cache scope (`md2conf-docker`) with `mode=max` to ensure layer reuse across different workflows (e.g., `test-action` reusing layers from `publish-docker`).
 
 **Configuring GitHub Actions for Custom Docker Hub:**
