@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - add-github-action
+      - optimise-docker-layers-for-improved-build-caching
   workflow_dispatch:
 
 jobs:
