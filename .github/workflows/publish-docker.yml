@@ -58,6 +58,7 @@ jobs:
           files: |
             ./docker-bake.hcl
           targets: default
+          source: .
           # Push if: (1) triggered by tag, OR (2) manual dispatch with push_images=true
           push: ${{ startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.push_images) }}
           set: |
