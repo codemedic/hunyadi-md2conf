@@ -3,11 +3,14 @@ name: Tag Alias
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'        # All versions
+      - '!v*.*.*-test*' # Exclude test tags
 
 jobs:
   tag-alias:
     runs-on: ubuntu-latest
+    # Only run for stable releases (not pre-releases or test tags)
+    if: ${{ !contains(github.ref_name, '-test') && !contains(github.ref_name, 'a') && !contains(github.ref_name, 'b') && !contains(github.ref_name, 'rc') }}
     permissions:
       contents: write  # Needed to push a new tag
     steps:
@@ -16,14 +19,31 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Validate release branch (production tags only on master)
+        run: |
+          # Get branches containing this commit
+          BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -E 'origin/(master|main)' || echo "")
+
+          if [[ -z "$BRANCHES" ]]; then
+            echo "ERROR: Production version tags (v*.*.*) must be created on master/main branch"
+            echo "This commit is not reachable from master/main."
+            echo ""
+            echo "For testing on feature branches, use test tags: v*.*.*-test"
+            exit 1
+          fi
+
+          echo "✓ Validated: Tag is on master/main branch"
+
       - name: Create and push major version tag
         run: |
           # Configure git
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
 
-          # Extract the major version from the tag (e.g., v1 from v1.2.3)
+          # Extract the major version from the tag (e.g., v0 from v0.6.0)
           MAJOR_VERSION=$(echo ${{ github.ref_name }} | cut -d. -f1)
+
+          echo "Creating major version tag: $MAJOR_VERSION for stable release ${{ github.ref_name }}"
 
           # Create the major version tag locally, forcing it to the current commit
           git tag -f $MAJOR_VERSION ${{ github.sha }}

@@ -4,32 +4,89 @@ on:
   push:
     # Pattern matched against refs/tags
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'      # Triggers on ALL: v0.6.0, v0.6.0a1, v0.6.0-test
+      - '!v*.*.*-test*' # EXCLUDE test tags (negative pattern)
 
 env:
   PIP_DISABLE_PIP_VERSION_CHECK: 1
+  # PyPI target - can be overridden in repository variables
+  # Options: 'pypi' (default) or 'testpypi'
+  PYPI_TARGET: ${{ vars.PYPI_TARGET || 'pypi' }}
 
 jobs:
   pypi-publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
+    # Skip if tag ends with -test (fallback if negative pattern doesn't work)
+    if: ${{ !contains(github.ref_name, '-test') }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Validate release branch (production tags only on master)
+        run: |
+          # Get branches containing this commit
+          BRANCHES=$(git branch -r --contains ${{ github.sha }} | grep -E 'origin/(master|main)' || echo "")
+
+          if [[ -z "$BRANCHES" ]]; then
+            echo "ERROR: Production version tags (v*.*.*) must be created on master/main branch"
+            echo "This commit is not reachable from master/main."
+            echo ""
+            echo "For testing on feature branches, use test tags: v*.*.*-test"
+            exit 1
+          fi
+
+          echo "✓ Validated: Tag is on master/main branch"
+
+      - name: Detect release type and repository
+        id: release_type
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"  # Remove 'v' prefix
+
+          if [[ "$VERSION" =~ (a|b|rc) ]]; then
+            echo "type=pre-release" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "Publishing pre-release version: $VERSION"
+          else
+            echo "type=stable" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "Publishing stable version: $VERSION"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Determine target repository and URL
+          TARGET="${{ env.PYPI_TARGET }}"
+          if [[ "$TARGET" == "testpypi" ]]; then
+            echo "repository=testpypi" >> $GITHUB_OUTPUT
+            echo "repository_url=https://test.pypi.org/legacy/" >> $GITHUB_OUTPUT
+            echo "Target: TestPyPI (https://test.pypi.org)"
+          else
+            echo "repository=pypi" >> $GITHUB_OUTPUT
+            echo "repository_url=https://upload.pypi.org/legacy/" >> $GITHUB_OUTPUT
+            echo "Target: PyPI (https://pypi.org)"
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.10"
+
       - name: Install build dependencies
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install build
+
       - name: Build package
         run: |
           python3 -m build --sdist --wheel
+
       - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_ID_TOKEN }}
+          repository-url: ${{ steps.release_type.outputs.repository_url }}
+          # Use TEST_PYPI_API_TOKEN for TestPyPI, PYPI_ID_TOKEN for production
+          password: ${{ steps.release_type.outputs.repository == 'testpypi' && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_ID_TOKEN }}
+        # Note: PyPI automatically handles pre-release classification based on version

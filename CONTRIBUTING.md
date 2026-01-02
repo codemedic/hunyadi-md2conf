@@ -245,18 +245,25 @@ The `Dockerfile` and GitHub Action workflows are optimized for high-performance 
 - **Docker Bake:** We use `docker buildx bake` to build all image variants in parallel, ensuring shared layers are built only once.
 - **Shared CI Cache:** Workflows use a shared cache scope (`md2conf-docker`) with `mode=max` to ensure layer reuse across different workflows (e.g., `test-action` reusing layers from `publish-docker`).
 
-**Configuring GitHub Actions for Custom Docker Hub:**
+**Configuring GitHub Actions for Custom Publishing:**
 
-To publish images to your own Docker Hub account, configure the following in your GitHub repository:
+To publish to your own Docker Hub account and/or TestPyPI, configure the following in your GitHub repository:
 
 1. **Repository Secrets** (Settings → Secrets and variables → Actions → Secrets):
    - `DOCKER_USERNAME`: Your Docker Hub username
    - `DOCKER_PASSWORD`: Your Docker Hub access token or password
+   - `TEST_PYPI_API_TOKEN`: Your TestPyPI API token (for testing PyPI publishing)
+   - `PYPI_ID_TOKEN`: Production PyPI API token (only for upstream repository)
 
 2. **Repository Variables** (Settings → Secrets and variables → Actions → Variables):
    - `DOCKER_IMAGE_NAME`: Your image name (e.g., `yourusername/md2conf`)
+   - `PYPI_TARGET`: PyPI target repository
+     - `pypi` - Production PyPI (default)
+     - `testpypi` - TestPyPI for testing
 
-If `DOCKER_IMAGE_NAME` is not set, it defaults to `leventehunyadi/md2conf`.
+**Defaults:**
+- `DOCKER_IMAGE_NAME`: `leventehunyadi/md2conf`
+- `PYPI_TARGET`: `pypi` (production)
 
 **Triggering Docker Builds:**
 
@@ -278,3 +285,104 @@ If `DOCKER_IMAGE_NAME` is not set, it defaults to `leventehunyadi/md2conf`.
    - Select your branch
    - Choose "Push images to Docker Hub" (true/false)
    - Builds all 4 variants tagged with commit SHA (e.g., `yourusername/md2conf:sha-abc1234-minimal`)
+
+**Testing PyPI Publishing:**
+
+To test PyPI publishing in your forked repository without affecting the production package:
+
+1. **Get a TestPyPI account:**
+   - Register at https://test.pypi.org/account/register/
+   - Generate an API token at https://test.pypi.org/manage/account/token/
+
+2. **Configure your fork:**
+   - Add secret `TEST_PYPI_API_TOKEN` with your TestPyPI token
+   - Add variable `PYPI_TARGET` = `testpypi`
+
+3. **Test publishing:**
+   ```bash
+   git tag v0.5.2rc1
+   git push origin v0.5.2rc1
+   ```
+
+4. **Verify on TestPyPI:**
+   - Check: https://test.pypi.org/project/markdown-to-confluence/
+   - Install: `pip install --index-url https://test.pypi.org/simple/ markdown-to-confluence==0.5.2rc1`
+
+**Important:** TestPyPI is separate from production PyPI. Publishing there won't affect the real package. However, the package name must still be unique on TestPyPI itself.
+
+## Release Infrastructure
+
+The project implements a structured release workflow supporting test releases, pre-releases (alpha/beta/RC), and stable releases. This infrastructure provides safe testing capabilities and follows PEP 440 versioning standards.
+
+### Release Types
+
+**Test Releases** (`v*.*.*-test`): For internal workflow validation. These tags don't trigger production publishing and can be created on any branch. Use for testing workflow changes or Docker build optimizations without risk.
+
+**Pre-Releases** (`v*.*.*a1`, `v*.*.*b1`, `v*.*.*rc1`): Public testing releases. Published to PyPI and Docker Hub but hidden from default installations. Users must explicitly opt-in with `pip install --pre` or specify the exact version. Pre-releases don't update the `latest` Docker tag or create major version Git tags.
+
+**Stable Releases** (`v*.*.*`): Production-ready releases. Published to PyPI as the default version, updates Docker `latest` tags, and creates/updates major version Git tags (e.g., `v0`).
+
+### Branch Protection
+
+Production version tags (including pre-releases) can only be created on the `master` branch. This prevents accidental releases from feature branches. The workflows validate the branch and fail with a clear error if the tag is not on master. Test tags (`v*.*.*-test`) are exempt from this restriction and don't trigger workflows.
+
+### Creating Releases
+
+All releases must be created from the `master` branch after passing quality checks:
+
+```bash
+git checkout master
+git pull upstream master
+./check.sh
+```
+
+**Alpha release:**
+```bash
+git tag -a v0.6.0a1 -m "Alpha 1 for version 0.6.0"
+git push upstream v0.6.0a1
+```
+
+**Stable release:**
+```bash
+git tag -a v0.6.0 -m "Release version 0.6.0"
+git push upstream v0.6.0
+```
+
+### Safety Features
+
+The release infrastructure includes multiple safety mechanisms:
+
+- Branch validation prevents tags on feature branches
+- Pre-releases are hidden from pip by default (requires `--pre` flag)
+- Docker `latest` tag only updates for stable releases
+- Major version tags only created for stable releases
+- Test tags completely bypass production workflows
+
+### Testing Workflow Changes
+
+To test workflow modifications without publishing:
+
+**Using test tags:**
+```bash
+git tag v0.6.0-test
+git push origin v0.6.0-test
+# Workflows don't trigger
+```
+
+**Using workflow dispatch:**
+```bash
+gh workflow run publish-docker.yml --ref your-branch -f push_images=false
+# Builds Docker images but doesn't push
+```
+
+### Publishing Behavior
+
+| Release Type | PyPI | Docker Hub | `latest` Tag | Major Tag |
+|--------------|------|------------|--------------|-----------|
+| Test (`-test`) | No | No | No | No |
+| Alpha/Beta/RC | Yes* | Yes | No | No |
+| Stable | Yes | Yes | Yes | Yes |
+
+\* Pre-releases published but hidden by default
+
+See `.github/RELEASE.md` for complete release process documentation.
