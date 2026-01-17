@@ -10,6 +10,7 @@ import hashlib
 import logging
 import os
 from abc import abstractmethod
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -270,12 +271,17 @@ class Processor:
         props = document.properties
         title = props.title or unique_title(text)
 
+        synchronized = props.synchronized if props.synchronized is not None else True
+        if props.publish_after is not None and props.publish_after > datetime.now(timezone.utc) and not self.options.ignore_publish_after:
+            LOGGER.info("Scheduled publish at %s for file: %s", props.publish_after, path)
+            synchronized = False
+
         return DocumentNode(
             absolute_path=path,
             page_id=props.page_id,
             space_key=props.space_key,
             title=title,
-            synchronized=props.synchronized if props.synchronized is not None else True,
+            synchronized=synchronized,
         )
 
     def _generate_hash(self, absolute_path: Path) -> str:

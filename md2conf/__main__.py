@@ -326,6 +326,12 @@ def get_parser() -> argparse.ArgumentParser:
         metavar="KEY=VALUE",
         help="Apply custom headers to all Confluence API requests.",
     )
+    parser.add_argument(
+        "--ignore-publish-after",
+        action="store_true",
+        default=False,
+        help="Ignore 'publish_after' front-matter setting and publish all pages immediately.",
+    )
     return parser
 
 
@@ -372,6 +378,7 @@ def main() -> None:
         title_prefix=args.title_prefix,
         generated_by=args.generated_by,
         skip_update=args.skip_update,
+        ignore_publish_after=args.ignore_publish_after,
         converter=ConverterOptions(
             heading_anchors=args.heading_anchors,
             ignore_invalid_url=args.ignore_invalid_url,

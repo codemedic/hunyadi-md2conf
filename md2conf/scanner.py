@@ -7,6 +7,7 @@ Copyright 2022-2026, Levente Hunyadi
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import TypeVar
 
@@ -42,6 +43,7 @@ class DocumentProperties:
     :param title: The title extracted from front-matter.
     :param tags: A list of tags (content labels) extracted from front-matter.
     :param synchronized: True if the document content is parsed and synchronized with Confluence.
+    :param publish_after: Date and time after which the document is to be synchronized with Confluence.
     :param properties: A dictionary of key-value pairs extracted from front-matter to apply as page properties.
     :param layout: Layout options for content on a Confluence page.
     """
@@ -52,6 +54,7 @@ class DocumentProperties:
     title: str | None = None
     tags: list[str] | None = None
     synchronized: bool | None = None
+    publish_after: datetime | None = None
     properties: dict[str, JsonType] | None = None
     layout: LayoutOptions | None = None
 

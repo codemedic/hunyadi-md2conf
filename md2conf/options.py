@@ -107,6 +107,7 @@ class DocumentOptions:
     :param title_prefix: String to prepend to Confluence page title for each published page.
     :param generated_by: Text to use as the generated-by prompt (or `None` to omit a prompt).
     :param skip_update: Whether to skip saving Confluence page ID in Markdown files.
+    :param ignore_publish_after: Whether to ignore 'publish_after' front-matter setting and publish all pages immediately.
     :param converter: Options for converting an HTML tree into Confluence Storage Format.
     """
 
@@ -115,4 +116,5 @@ class DocumentOptions:
     title_prefix: str | None = None
     generated_by: str | None = "This page has been generated with a tool."
     skip_update: bool = False
+    ignore_publish_after: bool = False
     converter: ConverterOptions = dataclasses.field(default_factory=ConverterOptions)

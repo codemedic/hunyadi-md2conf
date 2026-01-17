@@ -24,7 +24,9 @@ _converter = make_converter(forbid_extra_keys=False)
 if sys.version_info < (3, 11):
 
     @_converter.register_structure_hook
-    def datetime_structure_hook(value: str, cls: type[datetime]) -> datetime:
+    def datetime_structure_hook(value: str | datetime, cls: type[datetime]) -> datetime:
+        if isinstance(value, datetime):
+            return value
         if value.endswith("Z"):
             # fromisoformat() prior to Python version 3.11 does not support military time zones like "Zulu" for UTC
             value = f"{value[:-1]}+00:00"

@@ -31,6 +31,7 @@ This Python package
 * [Mermaid diagrams](https://mermaid.live/)
 * PlantUML diagrams
 * Math formulas with LaTeX notation
+* [Scheduled publishing](#scheduled-publishing)
 * Confluence status labels and date widget
 
 Whenever possible, the implementation uses [Confluence REST API v2](https://developer.atlassian.com/cloud/confluence/rest/v2/) to fetch space properties, and get, create or update page content.
@@ -566,6 +567,21 @@ This Markdown document is neither parsed, nor synchronized with Confluence.
 
 This is useful if you have a page in a hierarchy that participates in parent-child relationships but whose content is edited directly in Confluence. Specifically, these documents can be referenced with relative links from other Markdown documents in the file system tree.
 
+### Scheduled publishing
+
+You can delay the synchronization of a Markdown document until a specified date and time by adding the `publish_after` attribute to the front-matter. This attribute accepts an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted date string.
+
+```yaml
+---
+title: "Upcoming product launch"
+publish_after: "2026-01-18T09:00:00Z"
+---
+```
+
+If the current UTC time is earlier than the specified `publish_after` timestamp, the document is skipped during synchronization. This feature is particularly useful when integrating with periodic synchronization workflows (e.g., GitHub Actions scheduled events) to ensure content goes live at a specific time.
+
+To bypass this check and publish all pages immediately (e.g., for previewing changes from a development branch), use the `--ignore-publish-after` command-line flag.
+
 ### Labels
 
 If a Markdown document has the front-matter attribute `tags`, *md2conf* assigns the specified tags to the Confluence page as labels.
@@ -668,6 +684,8 @@ options:
   --local               Write XHTML-based Confluence Storage Format files locally without invoking Confluence API.
   --headers KEY=VALUE [KEY=VALUE ...]
                         Apply custom headers to all Confluence API requests.
+  --ignore-publish-after
+                        Ignore 'publish_after' front-matter setting and publish all pages immediately.
 ```
 
 #### Python
