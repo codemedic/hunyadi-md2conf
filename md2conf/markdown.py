@@ -6,6 +6,7 @@ Copyright 2022-2026, Levente Hunyadi
 :see: https://github.com/hunyadi/md2conf
 """
 
+import re
 import xml.etree.ElementTree
 from typing import Any
 
@@ -38,6 +39,32 @@ def _emoji_generator(
         emoji.text = alt
 
     return emoji
+
+
+def filter_markdown(text: str) -> str:
+    """
+    Removes portions of Markdown content between skip markers.
+
+    Raises an error if markers are unbalanced, nested, or out of order to prevent information leakage.
+    """
+
+    start_pattern = r"<!--\s*confluence-skip-start\s*-->"
+    end_pattern = r"<!--\s*confluence-skip-end\s*-->"
+
+    starts = list(re.finditer(start_pattern, text))
+    ends = list(re.finditer(end_pattern, text))
+
+    if len(starts) != len(ends):
+        raise ValueError(f"unbalanced skip markers: found {len(starts)} start marker(s) and {len(ends)} end marker(s)")
+
+    # Perform non-greedy substitution
+    filtered_text = re.sub(f"{start_pattern}.*?{end_pattern}", "", text, flags=re.DOTALL)
+
+    # If markers remain, it means they were out of order, nested, or interleaved
+    if re.search(start_pattern, filtered_text) or re.search(end_pattern, filtered_text):
+        raise ValueError("nested, interleaved or out-of-order skip markers detected")
+
+    return filtered_text
 
 
 def _verbatim_formatter(
@@ -111,6 +138,7 @@ def markdown_to_html(content: str) -> str:
     :see: https://python-markdown.github.io/
     """
 
+    content = filter_markdown(content)
     _CONVERTER.reset()
     html = _CONVERTER.convert(content)
     return html
